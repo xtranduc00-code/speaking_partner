@@ -1,0 +1,46 @@
+{
+  "../../../~start/default-client-entry.tsx": {
+    "file": "assets/main-CPzgRCBR.js",
+    "name": "main",
+    "src": "../../../~start/default-client-entry.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/routes/demo.tsx?tsr-split=component",
+      "src/routes/index.tsx?tsr-split=component"
+    ],
+    "assets": [
+      "assets/app-MuoLlRV8.css"
+    ]
+  },
+  "/Users/kentran/gpt-realtime-demo/src/styles/app.css": {
+    "file": "assets/app-MuoLlRV8.css",
+    "src": "/Users/kentran/gpt-realtime-demo/src/styles/app.css"
+  },
+  "_utils-07oWNKtX.js": {
+    "file": "assets/utils-07oWNKtX.js",
+    "name": "utils",
+    "imports": [
+      "../../../~start/default-client-entry.tsx"
+    ]
+  },
+  "src/routes/demo.tsx?tsr-split=component": {
+    "file": "assets/demo-oYsVtDTD.js",
+    "name": "demo",
+    "src": "src/routes/demo.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "../../../~start/default-client-entry.tsx",
+      "_utils-07oWNKtX.js"
+    ]
+  },
+  "src/routes/index.tsx?tsr-split=component": {
+    "file": "assets/index-Dl9woCgc.js",
+    "name": "index",
+    "src": "src/routes/index.tsx?tsr-split=component",
+    "isDynamicEntry": true,
+    "imports": [
+      "../../../~start/default-client-entry.tsx",
+      "_utils-07oWNKtX.js"
+    ]
+  }
+}

@@ -1,12 +1,17 @@
-# Welcome to TanStack.com!
+# English Realtime Tutor (TanStack Start)
 
-This site is built with TanStack Router!
+Demo app: call với AI tutor (OpenAI Realtime API), 2 người dùng (bạn + bạn).
 
-- [TanStack Router Docs](https://tanstack.com/router)
+## Deploy trên Netlify
 
-It's deployed automagically with Netlify!
+1. Push repo lên GitHub, vào [Netlify](https://app.netlify.com) → **Add new site** → **Import from Git** → chọn repo.
+2. Build settings (đã có trong `netlify.toml`):
+   - Build command: `vite build`
+   - Publish directory: `dist`
+3. **Environment variables** (bắt buộc): Site settings → **Environment variables** → thêm:
+   - `OPENAI_API_KEY` = API key OpenAI của bạn (để Realtime + server functions chạy).
 
-- [Netlify](https://netlify.com/)
+Sau khi deploy, mở URL site và bấm Start Call để gọi.
 
 ## Development
 

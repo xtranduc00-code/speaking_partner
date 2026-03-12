@@ -89,36 +89,35 @@ export const MessageStatus = ({ status, readAt }: MessageStatusProps) => {
 interface MessageItemProps extends ComponentPropsWithRef<"li"> {
     msg: Message;
     showUserLabel?: boolean;
+    onCorrect?: () => void;
+    onSimplify?: () => void;
 }
 
-export const MessageItem = ({ msg, showUserLabel = true, ...props }: MessageItemProps) => {
+export const MessageItem = ({ msg, showUserLabel = true, onCorrect, onSimplify, ...props }: MessageItemProps) => {
     const renderActions = () => (
         <div className="dark-mode absolute right-2 -bottom-5 z-1 flex gap-1.5 rounded-lg bg-primary_alt px-2 py-1.5 opacity-0 shadow-xl transition duration-100 ease-linear group-hover/msg:opacity-100">
-            <button
-                title="Generate with AI"
-                aria-label="Generate with AI"
-                className="cursor-pointer rounded p-0.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-                <Stars02 className="size-4" />
-            </button>
-
-            {(msg.text || msg.attachment || msg.audio || msg.image) && (
+            {onCorrect && msg.text && (
                 <button
-                    title={msg.text ? "Edit message" : "Download"}
-                    aria-label={msg.text ? "Edit message" : "Download"}
+                    title="Correct this message"
+                    aria-label="Correct this message"
                     className="cursor-pointer rounded p-0.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2"
+                    onClick={onCorrect}
                 >
-                    {msg.text ? <Edit04 className="size-4" /> : <DownloadCloud02 className="size-4" />}
+                    <Edit04 className="size-4" />
                 </button>
             )}
 
-            <button
-                title="Reply"
-                aria-label="Reply"
-                className="cursor-pointer rounded p-0.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-                <RefreshCcw02 className="size-4" />
-            </button>
+            {onSimplify && msg.text && (
+                <button
+                    title="Simplify this answer"
+                    aria-label="Simplify this answer"
+                    className="cursor-pointer rounded p-0.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2"
+                    onClick={onSimplify}
+                >
+                    <Stars02 className="size-4" />
+                </button>
+            )}
+
             <button
                 title="Copy"
                 aria-label="Copy"

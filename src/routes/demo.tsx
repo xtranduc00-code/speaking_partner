@@ -181,7 +181,7 @@ function Home() {
         </ol>
         {session && (
           <MessageActionTextarea
-            onSubmit={async (message, image) => {
+            onSubmit={async (message, file) => {
               const input: RealtimeUserInput = {
                 role: "user",
                 type: "message",
@@ -189,18 +189,25 @@ function Home() {
               };
 
               if (message.trim()) {
-                input.content.push({
-                  type: "input_text",
-                  text: message,
-                });
+                input.content.push({ type: "input_text", text: message });
               }
 
-              if (image) {
-                const base64Image = await convertFileToBase64(image);
-                input.content.push({
-                  type: "input_image",
-                  image: base64Image,
-                });
+              if (file) {
+                if (file.type.startsWith("image/")) {
+                  input.content.push({
+                    type: "input_image",
+                    image: await convertFileToBase64(file),
+                  });
+                } else if (
+                  file.type.startsWith("text/") ||
+                  file.type === "application/json" ||
+                  /\.(txt|csv|md|json)$/i.test(file.name)
+                ) {
+                  input.content.push({
+                    type: "input_text",
+                    text: `Here is my vocabulary or notes:\n\n${await file.text()}`,
+                  });
+                }
               }
 
               session.sendMessage(input);
