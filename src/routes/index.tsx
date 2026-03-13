@@ -37,7 +37,8 @@ function parseSavedSessions(raw: string): SavedSession[] {
       if (!session || typeof session !== "object") return null;
       const candidate = session as Partial<SavedSession>;
 
-      const id = typeof candidate.id === "string" ? candidate.id : String(Date.now());
+      const id =
+        typeof candidate.id === "string" ? candidate.id : String(Date.now());
       const startedAt =
         typeof candidate.startedAt === "string"
           ? candidate.startedAt
@@ -190,6 +191,7 @@ export const getApiKeyFn = createServerFn().handler(async () => {
 function Home() {
   const getApiKey = useServerFn(getApiKeyFn);
   const [loading, setLoading] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [session, setSession] = useState<RealtimeSession | null>(null);
   const [history, setHistory] = useState<RealtimeItem[]>([]);
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
@@ -357,110 +359,149 @@ function Home() {
               className="z-10 dark:bg-brand-solid dark:text-white dark:hover:bg-brand-solid_hover dark:shadow-xs-skeumorphic dark:ring-1 dark:ring-transparent dark:ring-inset dark:before:absolute dark:before:inset-px dark:before:border dark:before:border-white/12 dark:before:mask-b-from-0%"
               onClick={async () => {
                 const audio = createAudio(sounds.dialing, { loop: true });
-                const sessionId =
-                  typeof crypto !== "undefined" && "randomUUID" in crypto
-                    ? crypto.randomUUID()
-                    : String(Date.now());
-                const startedAt = new Date().toISOString();
-
-                setSavedSessions((prev) => {
-                  const next: SavedSession[] = [
-                    ...prev,
-                    { id: sessionId, startedAt, messages: [] },
-                  ];
-                  persistSessions(next);
-                  return next;
-                });
-
-                audio.play();
+                setRuntimeError(null);
                 setLoading(true);
+                audio.play();
 
-                const selectedMode =
-                  LEARNING_MODES.find((m) => m.id === modeId) ??
-                  LEARNING_MODES[0];
+                try {
+                  // Prompt mic permission once so failures are explicit.
+                  if (
+                    typeof navigator !== "undefined" &&
+                    navigator.mediaDevices
+                  ) {
+                    try {
+                      const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                      });
+                      stream.getTracks().forEach((track) => track.stop());
+                    } catch {
+                      setRuntimeError(
+                        "Microphone permission is blocked. You can still type, but voice input will not work.",
+                      );
+                    }
+                  }
 
-                const baseInstructions = selectedMode.buildInstructions({
-                  level,
-                  goal,
-                });
-                const instructions = `${baseInstructions}\nSpeaking speed: ${speakingSpeed}.`;
-
-                const agent = new RealtimeAgent({
-                  name: "Agent",
-                  instructions,
-                  tools: [
-                    tool({
-                      name: "Test Tool",
-                      description:
-                        "This is a test tool. Use this at the start of a conversation to test the tool.",
-                      execute: async () => {
-                        console.log("Test Tool executed");
-                      },
-                      parameters: {
-                        type: "object",
-                        properties: {},
-                        required: [],
-                        additionalProperties: true,
-                      },
-                      strict: false,
-                    }),
-                  ],
-                });
-
-                const session = new RealtimeSession(agent);
-                setSession(session);
-
-                session.on("history_updated", (event) => {
-                  setHistory(event);
-                  const messages: SavedMessage[] = event
-                    .filter((item) => item.type === "message")
-                    .map((item) => {
-                      const extractedText = item.content
-                        .map((c) => {
-                          if (
-                            c.type === "input_audio" ||
-                            c.type === "output_audio"
-                          ) {
-                            return c.transcript;
-                          }
-
-                          if (
-                            c.type === "input_text" ||
-                            c.type === "output_text"
-                          ) {
-                            return c.text;
-                          }
-
-                          return "";
-                        })
-                        .filter(Boolean)
-                        .join("\n");
-
-                      return {
-                        id: item.itemId,
-                        text: item.role === "user" ? "" : extractedText,
-                        me: item.role === "user",
-                        name: item.role === "user" ? "You" : "Agent",
-                      };
-                    });
+                  const sessionId =
+                    typeof crypto !== "undefined" && "randomUUID" in crypto
+                      ? crypto.randomUUID()
+                      : String(Date.now());
+                  const startedAt = new Date().toISOString();
 
                   setSavedSessions((prev) => {
-                    const next = [...prev];
-                    const idx = next.findIndex((s) => s.id === sessionId);
-                    if (idx === -1) return prev;
-                    next[idx] = { ...next[idx], messages };
+                    const next: SavedSession[] = [
+                      ...prev,
+                      { id: sessionId, startedAt, messages: [] },
+                    ];
                     persistSessions(next);
                     return next;
                   });
-                });
 
-                await session.connect({
-                  apiKey: (await getApiKey()).apiKey,
-                });
+                  const selectedMode =
+                    LEARNING_MODES.find((m) => m.id === modeId) ??
+                    LEARNING_MODES[0];
 
-                setLoading(false);
-                createAudio(sounds.connected, { volume: 0.7 }).play();
-                audio.stop();
+                  const baseInstructions = selectedMode.buildInstructions({
+                    level,
+                    goal,
+                  });
+                  const instructions = `${baseInstructions}\nSpeaking speed: ${speakingSpeed}.`;
+
+                  const agent = new RealtimeAgent({
+                    name: "Agent",
+                    instructions,
+                    tools: [
+                      tool({
+                        name: "Test Tool",
+                        description:
+                          "This is a test tool. Use this at the start of a conversation to test the tool.",
+                        execute: async () => {
+                          console.log("Test Tool executed");
+                        },
+                        parameters: {
+                          type: "object",
+                          properties: {},
+                          required: [],
+                          additionalProperties: true,
+                        },
+                        strict: false,
+                      }),
+                    ],
+                  });
+
+                  const session = new RealtimeSession(agent);
+                  setSession(session);
+
+                  session.on("history_updated", (event) => {
+                    setHistory(event);
+                    const messages: SavedMessage[] = event
+                      .filter((item) => item.type === "message")
+                      .map((item) => {
+                        const extractedText = item.content
+                          .map((c) => {
+                            if (
+                              c.type === "input_audio" ||
+                              c.type === "output_audio"
+                            ) {
+                              return c.transcript;
+                            }
+
+                            if (
+                              c.type === "input_text" ||
+                              c.type === "output_text"
+                            ) {
+                              return c.text;
+                            }
+
+                            return "";
+                          })
+                          .filter(Boolean)
+                          .join("\n");
+
+                        return {
+                          id: item.itemId,
+                          text: item.role === "user" ? "" : extractedText,
+                          me: item.role === "user",
+                          name: item.role === "user" ? "You" : "Agent",
+                        };
+                      });
+
+                    setSavedSessions((prev) => {
+                      const next = [...prev];
+                      const idx = next.findIndex((s) => s.id === sessionId);
+                      if (idx === -1) return prev;
+                      next[idx] = { ...next[idx], messages };
+                      persistSessions(next);
+                      return next;
+                    });
+                  });
+
+                  await session.connect({
+                    apiKey: (await getApiKey()).apiKey,
+                  });
+
+                  // Force a first assistant turn so audio/text output can be verified immediately.
+                  session.sendMessage({
+                    role: "user",
+                    type: "message",
+                    content: [
+                      {
+                        type: "input_text",
+                        text: "Please greet me in one short sentence to confirm the call is working.",
+                      },
+                    ],
+                  });
+
+                  createAudio(sounds.connected, { volume: 0.7 }).play();
+                } catch (error) {
+                  setRuntimeError(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not start the realtime session.",
+                  );
+                } finally {
+                  setLoading(false);
+                  audio.stop();
+                }
               }}
               iconLeading={
                 loading ? <PhoneCall01 data-icon /> : <Phone data-icon />
@@ -468,6 +509,12 @@ function Home() {
             >
               {loading ? "Calling..." : "Start Call"}
             </Button>
+          )}
+
+          {runtimeError && (
+            <p className="z-10 text-xs text-error-primary dark:text-error-primary">
+              {runtimeError}
+            </p>
           )}
         </div>
 
