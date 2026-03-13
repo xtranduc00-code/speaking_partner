@@ -428,8 +428,32 @@ function Home() {
                     ],
                   });
 
-                  const session = new RealtimeSession(agent);
+                  const session = new RealtimeSession(agent, {
+                    config: {
+                      outputModalities: ["audio", "text"],
+                      audio: {
+                        input: {
+                          // More predictable than semantic_vad for short utterances.
+                          turnDetection: {
+                            type: "server_vad",
+                            createResponse: true,
+                            silenceDurationMs: 600,
+                          },
+                          transcription: { model: "gpt-4o-mini-transcribe" },
+                        },
+                      },
+                    },
+                  });
                   setSession(session);
+                  session.on("error", (event) => {
+                    const details =
+                      event?.error instanceof Error
+                        ? event.error.message
+                        : typeof event?.error === "string"
+                          ? event.error
+                          : JSON.stringify(event?.error ?? event);
+                    setRuntimeError(`Realtime error: ${details}`);
+                  });
 
                   session.on("history_updated", (event) => {
                     setHistory(event);
