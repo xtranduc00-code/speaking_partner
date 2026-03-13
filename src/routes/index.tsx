@@ -28,6 +28,44 @@ type SavedSession = {
   messages: SavedMessage[];
 };
 
+function parseSavedSessions(raw: string): SavedSession[] {
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((session): SavedSession | null => {
+      if (!session || typeof session !== "object") return null;
+      const candidate = session as Partial<SavedSession>;
+
+      const id = typeof candidate.id === "string" ? candidate.id : String(Date.now());
+      const startedAt =
+        typeof candidate.startedAt === "string"
+          ? candidate.startedAt
+          : new Date().toISOString();
+      const messages = Array.isArray(candidate.messages)
+        ? candidate.messages
+            .map((message): SavedMessage | null => {
+              if (!message || typeof message !== "object") return null;
+              const msg = message as Partial<SavedMessage>;
+
+              return {
+                id:
+                  typeof msg.id === "string"
+                    ? msg.id
+                    : `${id}-${Math.random().toString(36).slice(2)}`,
+                text: typeof msg.text === "string" ? msg.text : "",
+                me: typeof msg.me === "boolean" ? msg.me : false,
+                name: typeof msg.name === "string" ? msg.name : "Agent",
+              };
+            })
+            .filter((message): message is SavedMessage => Boolean(message))
+        : [];
+
+      return { id, startedAt, messages };
+    })
+    .filter((session): session is SavedSession => Boolean(session));
+}
+
 type LearningLevel = "band_4_5" | "band_5_6" | "band_7_plus";
 type LearningGoal = "fluency" | "vocabulary" | "pronunciation";
 
@@ -37,7 +75,10 @@ type LearningMode = {
   id: LearningModeId;
   label: string;
   description: string;
-  buildInstructions: (opts: { level: LearningLevel; goal: LearningGoal }) => string;
+  buildInstructions: (opts: {
+    level: LearningLevel;
+    goal: LearningGoal;
+  }) => string;
 };
 
 const FRIEND_TONE = `
@@ -115,8 +156,7 @@ export const getApiKeyFn = createServerFn().handler(async () => {
   const client = new OpenAI();
 
   const tools =
-    process.env.HOME_ASSISTANT_MCP_ENDPOINT &&
-    process.env.HOME_ASSISTANT_TOKEN
+    process.env.HOME_ASSISTANT_MCP_ENDPOINT && process.env.HOME_ASSISTANT_TOKEN
       ? [
           {
             type: "mcp",
@@ -156,9 +196,9 @@ function Home() {
   const [modeId, setModeId] = useState<LearningModeId>("casual");
   const [level, setLevel] = useState<LearningLevel>("band_5_6");
   const [goal, setGoal] = useState<LearningGoal>("fluency");
-  const [speakingSpeed, setSpeakingSpeed] = useState<"slow" | "normal" | "fast">(
-    "normal",
-  );
+  const [speakingSpeed, setSpeakingSpeed] = useState<
+    "slow" | "normal" | "fast"
+  >("normal");
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -166,7 +206,7 @@ function Home() {
     try {
       const raw = window.localStorage.getItem(SESSIONS_STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as SavedSession[];
+        const parsed = parseSavedSessions(raw);
         setSavedSessions(parsed);
       }
     } catch {
@@ -261,10 +301,8 @@ function Home() {
           </div>
 
           <p className="z-10 mt-1 text-xs text-fg-secondary dark:text-fg-primary/80 text-center">
-            {
-              LEARNING_MODES.find((m) => m.id === modeId)?.description ??
-              LEARNING_MODES[0].description
-            }
+            {LEARNING_MODES.find((m) => m.id === modeId)?.description ??
+              LEARNING_MODES[0].description}
           </p>
 
           {showOnboarding && (
@@ -377,7 +415,7 @@ function Home() {
                   const messages: SavedMessage[] = event
                     .filter((item) => item.type === "message")
                     .map((item) => {
-                      const text = item.content
+                      const extractedText = item.content
                         .map((c) => {
                           if (
                             c.type === "input_audio" ||
@@ -400,7 +438,7 @@ function Home() {
 
                       return {
                         id: item.itemId,
-                        text,
+                        text: item.role === "user" ? "" : extractedText,
                         me: item.role === "user",
                         name: item.role === "user" ? "You" : "Agent",
                       };
@@ -437,7 +475,7 @@ function Home() {
         <ol className="flex h-full flex-col gap-4 overflow-y-auto px-4 py-6 md:px-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-primary dark:[&::-webkit-scrollbar-track]:bg-bg-primary">
           {session?.history.map((item) => {
             if (item.type === "message") {
-              const text = item.content
+              const extractedText = item.content
                 .map((c) => {
                   if (c.type === "input_audio" || c.type === "output_audio") {
                     return c.transcript;
@@ -451,6 +489,7 @@ function Home() {
                 })
                 .filter(Boolean)
                 .join("\n");
+              const text = item.role === "user" ? "" : extractedText;
 
               return (
                 <MessageItem
@@ -472,7 +511,7 @@ function Home() {
                             content: [
                               {
                                 type: "input_text",
-                                text: `Please correct my sentence and explain briefly: "${text}".`,
+                                text: `Please correct my sentence and explain briefly: "${extractedText}".`,
                               },
                             ],
                           });
@@ -596,7 +635,10 @@ function Home() {
                   role: "user",
                   type: "message",
                   content: [
-                    { type: "input_image", image: await convertFileToBase64(file) },
+                    {
+                      type: "input_image",
+                      image: await convertFileToBase64(file),
+                    },
                   ],
                 });
               } else if (
