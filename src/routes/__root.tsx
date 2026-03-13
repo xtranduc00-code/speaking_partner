@@ -13,6 +13,12 @@ import appCss from "~/styles/app.css?url";
 export const Route = createRootRoute({
   head: () => ({
     title: "gpt-realtime demo",
+    meta: [
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
+      },
+    ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootComponent,

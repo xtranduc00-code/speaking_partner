@@ -231,20 +231,20 @@ function Home() {
   };
 
   return (
-    <div className="p-2 min-h-screen pb-24 flex items-center justify-center w-full bg-bg-primary dark:bg-brand-950">
-      <div className="p-4 rounded-xl border border-border-brand/30 dark:border-border-brand/50 mx-auto max-w-full w-xl bg-white dark:bg-bg-secondary shadow-2xl shadow-brand-600/10 dark:shadow-brand-600/20">
-        <div className="relative flex justify-between flex-col rounded-lg p-8 items-center gap-4 bg-brand-50 dark:bg-brand-950">
-          <h1 className="text-2xl font-bold text-brand-800 dark:text-text-primary z-10">
+    <div className="p-2 min-h-screen pb-20 sm:pb-24 flex items-center justify-center w-full bg-bg-primary dark:bg-brand-950">
+      <div className="p-3 sm:p-4 rounded-xl border border-border-brand/30 dark:border-border-brand/50 mx-auto max-w-full w-full sm:w-xl bg-white dark:bg-bg-secondary shadow-2xl shadow-brand-600/10 dark:shadow-brand-600/20">
+        <div className="relative flex justify-between flex-col rounded-lg p-4 sm:p-8 items-center gap-4 bg-brand-50 dark:bg-brand-950">
+          <h1 className="text-xl sm:text-2xl font-bold text-brand-800 dark:text-text-primary z-10 text-center">
             English Realtime Tutor
           </h1>
 
-          <div className="z-10 grid w-full gap-3 text-xs text-fg-secondary dark:text-fg-primary md:grid-cols-4">
+          <div className="z-10 grid w-full grid-cols-2 gap-2 sm:gap-3 text-xs text-fg-secondary dark:text-fg-primary md:grid-cols-4">
             <label className="flex flex-col gap-1">
               <span className="font-medium text-[11px] uppercase tracking-wide">
                 Mode
               </span>
               <select
-                className="rounded-md border border-border-brand/40 bg-white px-2 py-1 text-xs dark:bg-bg-secondary"
+                className="rounded-md border border-border-brand/40 bg-white px-2 py-1.5 text-sm dark:bg-bg-secondary"
                 value={modeId}
                 onChange={(e) => setModeId(e.target.value as LearningModeId)}
               >
@@ -261,7 +261,7 @@ function Home() {
                 Level (IELTS)
               </span>
               <select
-                className="rounded-md border border-border-brand/40 bg-white px-2 py-1 text-xs dark:bg-bg-secondary"
+                className="rounded-md border border-border-brand/40 bg-white px-2 py-1.5 text-sm dark:bg-bg-secondary"
                 value={level}
                 onChange={(e) => setLevel(e.target.value as LearningLevel)}
               >
@@ -276,7 +276,7 @@ function Home() {
                 Goal
               </span>
               <select
-                className="rounded-md border border-border-brand/40 bg-white px-2 py-1 text-xs dark:bg-bg-secondary"
+                className="rounded-md border border-border-brand/40 bg-white px-2 py-1.5 text-sm dark:bg-bg-secondary"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value as LearningGoal)}
               >
@@ -290,7 +290,7 @@ function Home() {
                 Speaking speed
               </span>
               <select
-                className="rounded-md border border-border-brand/40 bg-white px-2 py-1 text-xs dark:bg-bg-secondary"
+                className="rounded-md border border-border-brand/40 bg-white px-2 py-1.5 text-sm dark:bg-bg-secondary"
                 value={speakingSpeed}
                 onChange={(e) =>
                   setSpeakingSpeed(e.target.value as "slow" | "normal" | "fast")
@@ -303,13 +303,13 @@ function Home() {
             </label>
           </div>
 
-          <p className="z-10 mt-1 text-xs text-fg-secondary dark:text-fg-primary/80 text-center">
+          <p className="z-10 mt-1 text-sm sm:text-xs text-fg-secondary dark:text-fg-primary/80 text-center">
             {LEARNING_MODES.find((m) => m.id === modeId)?.description ??
               LEARNING_MODES[0].description}
           </p>
 
           {showOnboarding && (
-            <div className="z-10 mt-2 w-full rounded-md border border-border-brand/30 bg-white/80 p-3 text-xs text-fg-secondary shadow-sm dark:bg-bg-secondary/80">
+            <div className="z-10 mt-2 w-full rounded-md border border-border-brand/30 bg-white/80 p-3 text-sm sm:text-xs text-fg-secondary shadow-sm dark:bg-bg-secondary/80">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium text-text-primary dark:text-text-primary">
