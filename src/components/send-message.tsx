@@ -197,7 +197,7 @@ export const MessageActionTextarea = ({
           </p>
         </div>
 
-        <div className="absolute right-2 bottom-2 sm:right-3.5 sm:bottom-10 flex items-center gap-2">
+        <div className="absolute right-4 bottom-13 sm:right-3.5 sm:bottom-10 flex items-center gap-2">
           <ButtonUtility
             icon={Image01}
             size="xs"

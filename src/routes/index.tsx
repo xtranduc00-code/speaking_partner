@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/base/buttons/button";
 import { Phone, PhoneCall01, PhoneHangUp } from "@untitledui/icons";
 import { createAudio, sounds } from "~/lib/audio";
@@ -12,6 +12,7 @@ import {
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import OpenAI from "openai";
 import { MessageItem } from "~/components/application/messaging/messaging";
+import { AgentSpeakingAvatar } from "~/components/agent-speaking-avatar";
 import { MessageActionTextarea } from "~/components/send-message";
 import { convertFileToBase64 } from "~/lib/utils";
 
@@ -190,6 +191,7 @@ export const getApiKeyFn = createServerFn().handler(async () => {
 });
 
 function Home() {
+  const SPEAKING_OFF_DELAY_MS = 1200;
   const getApiKey = useServerFn(getApiKeyFn);
   const [loading, setLoading] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
@@ -203,6 +205,28 @@ function Home() {
     "slow" | "normal" | "fast"
   >("normal");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const speakingOffTimerRef = useRef<number | null>(null);
+
+  const clearSpeakingOffTimer = () => {
+    if (speakingOffTimerRef.current !== null) {
+      window.clearTimeout(speakingOffTimerRef.current);
+      speakingOffTimerRef.current = null;
+    }
+  };
+
+  const markAgentSpeaking = () => {
+    clearSpeakingOffTimer();
+    setIsAgentSpeaking(true);
+  };
+
+  const markAgentSilent = (delayMs = SPEAKING_OFF_DELAY_MS) => {
+    clearSpeakingOffTimer();
+    speakingOffTimerRef.current = window.setTimeout(() => {
+      setIsAgentSpeaking(false);
+      speakingOffTimerRef.current = null;
+    }, delayMs);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -223,6 +247,19 @@ function Home() {
     if (!dismissed) {
       setShowOnboarding(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      clearSpeakingOffTimer();
+      setIsAgentSpeaking(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    return () => {
+      clearSpeakingOffTimer();
+    };
   }, []);
 
   const persistSessions = (sessions: SavedSession[]) => {
@@ -308,6 +345,13 @@ function Home() {
               LEARNING_MODES[0].description}
           </p>
 
+          <div className="z-10 mt-1 flex flex-col items-center gap-2">
+            <AgentSpeakingAvatar
+              isSpeaking={isAgentSpeaking}
+              isCallActive={Boolean(session)}
+            />
+          </div>
+
           {showOnboarding && (
             <div className="z-10 mt-2 w-full rounded-md border border-border-brand/30 bg-white/80 p-3 text-sm sm:text-xs text-fg-secondary shadow-sm dark:bg-bg-secondary/80">
               <div className="flex items-start justify-between gap-2">
@@ -348,6 +392,7 @@ function Home() {
               onClick={() => {
                 session.close();
                 setSession(null);
+                setIsAgentSpeaking(false);
               }}
               iconLeading={<PhoneHangUp data-icon />}
             >
@@ -362,6 +407,7 @@ function Home() {
                 const audio = createAudio(sounds.dialing, { loop: true });
                 setRuntimeError(null);
                 setLoading(true);
+                setIsAgentSpeaking(false);
                 audio.play();
 
                 try {
@@ -445,6 +491,12 @@ function Home() {
                     },
                   });
                   setSession(session);
+                  const sessionAny = session as unknown as {
+                    on: (
+                      eventName: string,
+                      listener: (...args: unknown[]) => void,
+                    ) => void;
+                  };
                   session.on("error", (event) => {
                     const details =
                       event?.error instanceof Error
@@ -453,6 +505,48 @@ function Home() {
                           ? event.error
                           : JSON.stringify(event?.error ?? event);
                     setRuntimeError(`Realtime error: ${details}`);
+                  });
+
+                  session.on("audio_start", () => {
+                    markAgentSpeaking();
+                  });
+
+                  session.on("audio_stopped", () => {
+                    markAgentSilent();
+                  });
+
+                  session.on("audio_interrupted", () => {
+                    markAgentSilent(0);
+                  });
+
+                  session.on("transport_event", (event: unknown) => {
+                    if (!event || typeof event !== "object") return;
+
+                    const payload = event as Record<string, unknown>;
+                    const type =
+                      typeof payload.type === "string" ? payload.type : "";
+
+                    const speakingStartTypes = new Set([
+                      "response.output_audio.delta",
+                      "response.audio.delta",
+                      "output_audio_buffer.started",
+                    ]);
+
+                    const speakingStopTypes = new Set([
+                      "response.output_audio.done",
+                      "response.audio.done",
+                      "output_audio_buffer.stopped",
+                      "response.cancelled",
+                    ]);
+
+                    if (speakingStartTypes.has(type)) {
+                      markAgentSpeaking();
+                      return;
+                    }
+
+                    if (speakingStopTypes.has(type)) {
+                      markAgentSilent();
+                    }
                   });
 
                   session.on("history_updated", (event) => {
@@ -510,6 +604,7 @@ function Home() {
                       ? error.message
                       : "Could not start the realtime session.",
                   );
+                  markAgentSilent(0);
                 } finally {
                   setLoading(false);
                   audio.stop();
