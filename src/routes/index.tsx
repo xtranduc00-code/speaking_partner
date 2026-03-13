@@ -178,7 +178,8 @@ export const getApiKeyFn = createServerFn().handler(async () => {
           voice: "cedar",
         },
       },
-      instructions: "You are an angry assistant.",
+      instructions:
+        "You are a friendly English tutor. Speak naturally, encouragingly, and stay in English.",
       tools,
     },
   });
@@ -430,7 +431,6 @@ function Home() {
 
                   const session = new RealtimeSession(agent, {
                     config: {
-                      outputModalities: ["audio", "text"],
                       audio: {
                         input: {
                           // More predictable than semantic_vad for short utterances.
@@ -501,18 +501,6 @@ function Home() {
 
                   await session.connect({
                     apiKey: (await getApiKey()).apiKey,
-                  });
-
-                  // Force a first assistant turn so audio/text output can be verified immediately.
-                  session.sendMessage({
-                    role: "user",
-                    type: "message",
-                    content: [
-                      {
-                        type: "input_text",
-                        text: "Please greet me in one short sentence to confirm the call is working.",
-                      },
-                    ],
                   });
 
                   createAudio(sounds.connected, { volume: 0.7 }).play();
